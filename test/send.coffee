@@ -1,5 +1,10 @@
-# sending
-# ----------------
+#
+# Send command
+# ----------
+# * Allow single line chaining
+# * Allow multi-branch chaining without library support
+# * Allow trailing if/unless support
+#
 
 class Buffer
   constructor: ->
@@ -12,8 +17,7 @@ test "send works with primitives", ->
   tests = [0, 1,true, false, [], {}, "a"]
   for test in test
     fn = ->
-      test send
-        valueOf()
+      test send .valueOf()
     eq test, fn()
     
 test "send works inline", ->
@@ -23,15 +27,15 @@ test "send works inline", ->
   
 test "send works with indents", ->
   fn = ->
-    "a".replace("a", "b") send
-      valueOf()
+    "a".replace("a", "b")
+      send .valueOf()
   eq "b", fn();
   
 test "send operates on result of previous line if preceeded by an indent", ->
 fn = ->
   "a".replace("a", "b")
     send
-      valueOf()
+      .valueOf()
 eq "b", fn();ß
 
   
@@ -39,58 +43,55 @@ test "send returns the last value only", ->
   tests = [0, 1,true, [], {}, "a"]
   for test in test
     fn = ->
-      test send
-        valueOf()
-        valueOf() is false
+      test
+        send .valueOf()
+        send .valueOf() is false
     eq false, fn()
     fn = ->
       test
-        valueOf() is false
-        valueOf()
+        send .valueOf() is false
+        send .valueOf()
     eq test, fn()
     fn = ->
-      test send
-        valueOf() send
-          valueOf() is false
-        valueOf()
+      test
+        send .valueOf()
+          send .valueOf() is false
+        send .valueOf()
     eq test, fn()
     
 test "send works several levels deep", ->
   a = new Buffer
   fn = ->
-    a send
-      prepend "a" send
-        prepend "a" send
-          prepend "a" send
-            prepend "a"
+    a
+      send .prepend "a"
+        send .prepend "a"
+          send .prepend "a"
+            send .prepend "a"
   eq 4, fn().val.length
   
 test "send executes lines in order", ->
   a = new Buffer
   fn = ->
-    a send
-      prepend "a" send
-        prepend "b" send
-          prepend "c"
-          prepend "d"
-      prepend "e" send
-        prepend "f"
+    a
+      send .prepend "a"
+        send .prepend "b"
+          send .prepend "c"
+          send .prepend "d"
+      send .prepend "e"
+        send .prepend "f"
   eq a, fn()
   eq "fedcba", a.val
   
 test "send allows for trailing if and unless on messages", ->
   a = new Buffer
   fn = ->
-    a send
-      prepend "a" if true
-        send
-          prepend "b" if false
-            send 
-              prepend "c"
-              prepend "d"
-      prepend "e" unless false
-        send
-          prepend "f" unless true
+    a
+      send .prepend "a" if true
+        send .prepend "b" if false
+            send .prepend "c"
+            send .prepend "d"
+      send .prepend "e" unless false
+        send .prepend "f" unless true
   eq a, fn()
   eq "ea", a.val
   
@@ -98,31 +99,37 @@ test "send allows for trailing if and unless on the send block", ->
   a = new Buffer
   fn = ->
     a
-      send if true
-        prepend "a"
-          send unless false
-            prepend "b"
-              send if false
-                prepend "c"
-                prepend "d"
-        prepend "e"
+      send if true .prepend "a"
+        send unless false .prepend "b"
+          send if false .prepend "c"
+          send .prepend "d"
+        send .prepend "e"
           send unless true
-            prepend "f"
+            send .prepend "f"
   eq a, fn()
   eq "eba", a.val
   
 test "send values can be used inside trailing if and unless statements", ->
   a = new Buffer
   fn = ->
-    a send
-      prepend "a" if val is ""
-        send
-          prepend "b" if val is ""
-            send
-              prepend "c"
-              prepend "d"
-      prepend "e" unless val is "ea"
-        send
-          prepend "f" unless val is "ea"
+    a
+      send .prepend "a" if .val is ""
+        send .prepend "b" if .val is ""
+            send .prepend "c"
+            send .prepend "d"
+      send .prepend "e" unless .val is "ea"
+        send .prepend "f" unless .val is "ea"
   eq a, fn()
   eq "ea", a.val
+  fn = ->
+    a
+      send if .val is "" .prepend "a"
+        send unless .val is "" .prepend "b"
+          if .val is ""
+            send .prepend "c"
+            send .prepend "d"
+        send .prepend "e"
+          send unless .val is "eba"
+            send .prepend "f"
+  eq a, fn()
+  eq "eba", a.val
